@@ -4,7 +4,6 @@ import logging
 from datetime import time
 import subprocess
 import urllib3
-from profile_sql import *
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from telebot import types

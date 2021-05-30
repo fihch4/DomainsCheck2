@@ -173,7 +173,8 @@ def information_domain(message):
                                                 "users.id_user = "
                                                 "%s ORDER BY (datetime) desc LIMIT 1", user_id, domain_id)
                 date_check_robots = db_date_check_robots['rows'][0][0]
-                db_count_domains_users = db.fetch("SELECT count(id_user) from USERS where domain_id = %s", domain_id)
+                # db_count_domains_users = db.fetch("SELECT count(domain_id) from USERS where id_user = %s", domain_id)
+                db_count_domains_users = db.fetch("SELECT count(domain_id) FROM users where domain_id = (SELECT domain_id FROM users WHERE id_user = %s)", domain_id)
                 count_domains_users = db_count_domains_users['rows'][0][0]
                 string_message = f"🌐Домен: {domain_url}\n" \
                                  f"✨Status Code UA Standard: {code_ua_standard}\n" \
@@ -308,39 +309,6 @@ def add_site_bd(message):
                                              f"✅ Успешно добавлен в базу данных\n"
                                              f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
 
-            # status = check_domain(domain_name_telegram)
-            # print(status)
-            # if status == 'Success':
-            #     expired = request_api_xml(domain_name_telegram)
-            #     expired_days = expired['difference_days']
-            #     expired_date = expired['expired_date']
-            #     domain = select_domain(domain_name_telegram)
-            #     domain_id = domain['id']
-            #     sql_insert_expired(domain_id, expired_date, expired_days)
-            #     print(f"Домен {domain_name_telegram} успешно добавлен в базу данных пользователя {user_id}")
-            #     bot.send_message(message.from_user.id,
-            #                      f"🌐 Домен: {domain_name_telegram}\n"
-            #                      f"✅ Успешно добавлен в базу данных пользователя: {user_id}\n"
-            #                      f"📅 Количество дней до освобождения домена: {expired_days}\n"
-            #                      f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
-            # elif status == "Error1":
-            #     bot.send_message(message.from_user.id,
-            #                      f"⚠ Домен {domain_name_telegram} ранее был добавлен в базу данных.\n"
-            #                      f"Для продолжения напишите /start")
-            # elif status == "Error2":
-            #     bot.send_message(message.from_user.id,
-            #                      f"❌ Код ответа сервера для домена НЕ равен 200 ОК.\n"
-            #                      f"⚠️Проверьте корректность написания доменного имени и его протокола.\n"
-            #                      f"Для продолжения напишите /start")
-            # elif status == "Error0":
-            #     delete_domain_url(domain_name_telegram, user_id)
-            #     bot.send_message(message.from_user.id,
-            #                      f"❌ Ошибка добавления. Ваш сервер заблокировал нашего бота или вы прислали "
-            #                      f"некорректный домен.\n Скорректируйте работу своего сервера или не добавляйте этот "
-            #                      f"домен.\n "
-            #                      f"Для продолжения напишите /start")
-            # else:
-            #     bot.send_message(message.from_user.id, f"Неизвестная ошибка. Напишите /start")
     except ValueError:
         bot.send_message(message.from_user.id, f"Ошибка добавления домена. Напишите /start")
     except TypeError:
@@ -437,7 +405,7 @@ def id_operator(message):
 
 
 def main():
-    com = 'pgrep -f telegram_bot.py'
+    com = 'pgrep -f telegram.py'
     p = subprocess.Popen([com], stdout=subprocess.PIPE, shell=True)
     res = p.communicate()[0]
     if isinstance(res, bytes):

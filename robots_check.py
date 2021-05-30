@@ -58,7 +58,6 @@ def check_robots_hash(domain_url):
             users_id_for_notification = db.fetch("SELECT users.telegram_id FROM domains, users WHERE "
                                                  "domains.id_domain = "
                                                  "users.domain_id AND domains.domain =%s", domain_url)
-
             if hash_robots != previous_hash:
                 for user_telegram in get_list_from_mysql(users_id_for_notification):
                     previous_date = db.fetch(
@@ -89,7 +88,8 @@ def check_robots_hash(domain_url):
                                 if int(len(interval_notification['rows'])) >= 1:
                                     interval_notification = interval_notification['rows'][0][0]
                                 else:
-                                    interval_notification = 3600
+                                    interval_notification = 7600
+                                print("Proбуем выход на уведомления")
                                 if time_delta_seconds >= interval_notification:
                                     message_telegram = f"Robots.txt для домена {domain_url} был изменен.\nОбщее " \
                                                        f"количество изменений за {interval_notification} сек.: " \
@@ -126,7 +126,8 @@ def check_robots_hash(domain_url):
                                 if int(len(interval_notification['rows'])) >= 1:
                                     interval_notification = interval_notification['rows'][0][0]
                                 else:
-                                    interval_notification = 3600
+                                    interval_notification = 7600
+                                print("Пробуем выход на уведомления")
                                 if time_delta_seconds >= interval_notification:
                                     message_telegram = f"Robots.txt для домена {domain_url} был изменен.\nОбщее " \
                                                        f"количество изменений за {interval_notification} сек.: " \
@@ -134,7 +135,7 @@ def check_robots_hash(domain_url):
                                                        f"проверить файл robots.txt"
                                     bot.send_message(user_telegram, message_telegram)
                                     db.commit(
-                                        "INSERT INTO notifications_status_code (id_domain, datetime_notification, "
+                                        "INSERT INTO notifications_robots_txt (id_domain, datetime_notification, "
                                         "id_user, message_notification) VALUES (%s, %s, %s, %s)",
                                         id_domain, datetime_notification_now, user_telegram, message_telegram)
 

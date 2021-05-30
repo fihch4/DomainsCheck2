@@ -94,35 +94,6 @@ def main():
                                         id_domain, datetime_notification_now, user_telegram, message_telegram)
 
 
-
-    # print(request_api_xml("https://helga.ru"))
-
-    # for domain in domains_dict:
-    #     print(domain)
-    #     print(domains_dict[domain])
-
-    # dictionary = (get_dictionary_domains_expired())
-    # for domain in dictionary:
-    #     domain_name = domain
-    #     domain_date_expired = dictionary[domain]['date_expired']
-    #     domain_id = dictionary[domain]['id']
-    #     user_tg_id = dictionary[domain]['user_tg_id']
-    #     days_expired = get_difference_days_expired(domain_date_expired)
-    #     print(days_expired)
-    #     update_difference_days(domain_id, days_expired)
-    #     if days_expired <= days_expired_check:
-    #         expired_actual_check = request_api_xml(domain_name)
-    #         date_now = expired_actual_check['expired_date']
-    #         if domain_date_expired.date() == date_now:
-    #             print("Дата освобождения домена еще не обновлена. Запись в БД новой даты не требуется")
-    #             bot.send_message(chat_id=user_tg_id, text=f"❗Внимание❗\n"
-    #                                                             f"Домен: {domain_name} освобождается {date_now}\n"
-    #                                                       f"Дней до освобождения домена: {days_expired}\n"
-    #                                                       f"Срочно продлите домен.")
-    #         else:
-    #             print("Дата освобождения домена обновлена. Перезаписываем информацию в БД.")
-
-
 if __name__ == '__main__':
     main()
 

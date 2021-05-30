@@ -8,7 +8,9 @@ from mysql_bot import MySQLi
 from multiprocessing import Pool
 import telebot
 import datetime
+import warnings
 
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 bot = telebot.TeleBot(token_tg_bot)
 
@@ -83,6 +85,8 @@ def status_code(domain_url, headers_type, text='off'):
         return "Timeout Error"
     except requests.exceptions.ProxyError:
         return "504"
+    except requests.exceptions.ConnectionError:
+        return "504"
 
 
 
@@ -151,6 +155,24 @@ def check_domain(domain_url, headers_type, text='off'):
                         error_request = {'code': "301 Redirects",
                                          'domain': domain_url,
                                          'text': "301 Redirects"
+                                         }
+                        return error_request
+                    col += 1
+                    time.sleep(pause_domain_check)
+                elif request_code.status_code == 404:
+                    if col > col_max:
+                        error_request = {'code': "404",
+                                         'domain': domain_url,
+                                         'text': "404 Not Found"
+                                         }
+                        return error_request
+                    col += 1
+                    time.sleep(pause_domain_check)
+                elif request_code.status_code != 200:
+                    if col > col_max:
+                        error_request = {'code': "Is not 200 OK code",
+                                         'domain': domain_url,
+                                         'text': request_code.status_code
                                          }
                         return error_request
                     col += 1
@@ -237,6 +259,7 @@ def status_code_domains(domain_url):
     status_code_yandex_bot_pc = check_domain(domain_url, yandex_header_pc)
     status_code_yandex_bot_mobile = check_domain(domain_url, yandex_header_mobile)
     status_code_google_bot_mobile = check_domain(domain_url, google_bot_mobile)
+    print(domain_url)
     if status_code_standard == 200:
         db.commit("INSERT INTO statistic_domains_check (datetime, id_domain, ua, response_code, result_check) VALUES "
                   "(%s, %s, %s, %s,%s)", date_and_time, id_domain, 'Standard', '200', 'Success_C')
@@ -264,6 +287,10 @@ def status_code_domains(domain_url):
         db.commit("INSERT INTO statistic_domains_check (datetime, id_domain, ua, response_code, result_check) VALUES "
                   "(%s, %s, %s, %s,%s)", date_and_time, id_domain, 'Google', status_code_google_bot_mobile['code'],
                   'Error_C')
+    print(status_code_standard)
+    print(status_code_google_bot_mobile)
+    print(status_code_yandex_bot_pc)
+    print(status_code_yandex_bot_mobile)
 
 def main():
     db = MySQLi(host, user, password, database_home)

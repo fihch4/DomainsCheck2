@@ -23,6 +23,7 @@ def main():
                 previous_date_notification_satus_code = db.fetch("SELECT datetime_notification FROM "
                                                                  "notifications_status_code WHERE id_user=%s AND "
                                                                  "id_domain=%s order by (datetime_notification) desc "
+                                                                 "id_domain=%s order by (datetime_notification) desc "
                                                                  "LIMIT 1", user_telegram, id_domain)
 
                 now_status_code_domain_check = db.fetch("SELECT ua, result_check, response_code, datetime FROM "

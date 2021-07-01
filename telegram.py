@@ -40,7 +40,8 @@ def handle_text(message):
         print(message.chat.id)
         print(message.text)
         bot.send_message(message.chat.id,
-                         f"📨 Пришлите мне адрес домена, который требуется отслеживать. Примеры:\n"
+                         f"📨 Пришлите мне адрес домена, который требуется отслеживать или список доменов (каждый "
+                         f"домен с новой строки).\nПримеры:\n"
                          f"https://site.ru\n"
                          f"http://site.ru\n"
                          f"https://www.site.ru",
@@ -230,77 +231,155 @@ def add_site_bd(message):
             user_id = message.from_user.id
             domain_name_telegram = message.text
             domain_name_telegram = str(domain_name_telegram).lower()
-            print(f"USER ID: {user_id} пытается добавить домен {domain_name_telegram}")
-            print(parse_domain_url(domain_name_telegram))
-            if not parse_domain_url(domain_name_telegram):
-                """
-                Пользователь прислал домен без протокола.
-                """
-                bot.send_message(message.from_user.id,
-                                 f"❌ Ошибка добавления домена.\n"
-                                 f"Причина: отсутствует протокол http/https\n"
-                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
-            else:
-                print(type(parse_domain_url(domain_name_telegram)))
-                db = MySQLi(host, user, password, database_home)
-                check_id_domain = db.fetch("SELECT id_domain FROM domains WHERE domain LIKE CONCAT('%', %s, '%')",
-                                           parse_domain_url(domain_name_telegram))
-                print(check_id_domain)
-                if not check_id_domain['rows']:  # если в БД нет домена
-                    print("Домена нет в БД")
-                    bot.send_message(message.from_user.id,
-                                     f"🕒 Пожалуйста, ожидайте.\n👮 Проводим первичную проверку домена.")
-
-                    status = check_domain(domain_name_telegram, standard_headers_list)
-
-                    if status != 200:
+            if '\n' in domain_name_telegram:
+                print("Пользователь прислал список доменов. Обрабатываем по очереди каждый.")
+                domains_from_user = domain_name_telegram.split('\n')
+                print(domains_from_user)
+                for domain_name_telegram in domains_from_user:
+                    """КОД, ЕСЛИ ЮЗЕР ПРИСЛАЛ МНОГО ДОМЕНОВ."""
+                    print(f"USER ID: {user_id} пытается добавить домен {domain_name_telegram}")
+                    print(parse_domain_url(domain_name_telegram))
+                    if not parse_domain_url(domain_name_telegram):
                         """
-                        Код ответа сервера для домена не равен 200 ОК. Отправляем юзеру уведомление.
+                        Пользователь прислал домен без протокола.
                         """
                         bot.send_message(message.from_user.id,
-                                         f"❌ Ошибка добавления домена: {domain_name_telegram}\n"
-                                         f"Причина: код ответа сервера {status['code']}\n"
-                                         f"💡 Добавляемый домен должен быть доступен для проверки "
-                                         f"и иметь код ответа сервера 200 ОК.\n"
+                                         f"❌ Ошибка добавления домена.\n"
+                                         f"Причина: отсутствует протокол http/https\n"
                                          f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
                     else:
-                        """
-                        Код ответа сервера = 200 ОК. Добавляем домен в БД и связываем с пользователем.
-                        """
-                        db.commit("INSERT INTO domains (domain) VALUES (%s)", domain_name_telegram)
+                        print(type(parse_domain_url(domain_name_telegram)))
+                        db = MySQLi(host, user, password, database_home)
                         check_id_domain = db.fetch(
                             "SELECT id_domain FROM domains WHERE domain LIKE CONCAT('%', %s, '%')",
                             parse_domain_url(domain_name_telegram))
                         print(check_id_domain)
-                        id_domain = (check_id_domain['rows'][0][0])
-                        print(id_domain)
-                        db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
-                                  message.from_user.username, id_domain, user_id)
-                        bot.send_message(message.from_user.id,
-                                         f"🌐 Домен: {domain_name_telegram}\n"
-                                         f"✅ Успешно добавлен в базу данных\n"
-                                         f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
-                else:
-                    print("Проверка привязки домена к пользователю")
-                    """
-                    Проверяем привязку домена к пользователям в БД.
-                    """
-                    telegram_users_id = db.fetch("SELECT telegram_id FROM users WHERE domain_id = %s",
-                                                 check_id_domain['rows'][0][0])
-                    if len(telegram_users_id['rows']) == 0:
-                        id_domain = (check_id_domain['rows'][0][0])
-                        db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
-                                  message.from_user.username, id_domain, user_id)
-                        bot.send_message(message.from_user.id,
-                                         f"🌐 Домен: {domain_name_telegram}\n"
-                                         f"✅ Успешно добавлен в базу данных\n"
-                                         f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
-                    else:
-                        if user_id in telegram_users_id['rows'][0]:
+                        if not check_id_domain['rows']:  # если в БД нет домена
+                            print("Домена нет в БД")
                             bot.send_message(message.from_user.id,
-                                             f"🌐 Домен: {domain_name_telegram} уже отслеживается.\n"
+                                             f"🕒 Пожалуйста, ожидайте.\n👮 Проводим первичную проверку домена.")
+
+                            status = check_domain(domain_name_telegram, standard_headers_list)
+
+                            if status != 200:
+                                """
+                                Код ответа сервера для домена не равен 200 ОК. Отправляем юзеру уведомление.
+                                """
+                                bot.send_message(message.from_user.id,
+                                                 f"❌ Ошибка добавления домена: {domain_name_telegram}\n"
+                                                 f"Причина: код ответа сервера {status['code']}\n"
+                                                 f"💡 Добавляемый домен должен быть доступен для проверки "
+                                                 f"и иметь код ответа сервера 200 ОК.\n"
+                                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                            else:
+                                """
+                                Код ответа сервера = 200 ОК. Добавляем домен в БД и связываем с пользователем.
+                                """
+                                db.commit("INSERT INTO domains (domain) VALUES (%s)", domain_name_telegram)
+                                check_id_domain = db.fetch(
+                                    "SELECT id_domain FROM domains WHERE domain LIKE CONCAT('%', %s, '%')",
+                                    parse_domain_url(domain_name_telegram))
+                                print(check_id_domain)
+                                id_domain = (check_id_domain['rows'][0][0])
+                                print(id_domain)
+                                db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
+                                          message.from_user.username, id_domain, user_id)
+                                bot.send_message(message.from_user.id,
+                                                 f"🌐 Домен: {domain_name_telegram}\n"
+                                                 f"✅ Успешно добавлен в базу данных\n"
+                                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                        else:
+                            print("Проверка привязки домена к пользователю")
+                            """
+                            Проверяем привязку домена к пользователям в БД.
+                            """
+                            telegram_users_id = db.fetch("SELECT telegram_id FROM users WHERE domain_id = %s",
+                                                         check_id_domain['rows'][0][0])
+                            if len(telegram_users_id['rows']) == 0:
+                                id_domain = (check_id_domain['rows'][0][0])
+                                db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
+                                          message.from_user.username, id_domain, user_id)
+                                bot.send_message(message.from_user.id,
+                                                 f"🌐 Домен: {domain_name_telegram}\n"
+                                                 f"✅ Успешно добавлен в базу данных\n"
+                                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                            else:
+                                if user_id in telegram_users_id['rows'][0]:
+                                    bot.send_message(message.from_user.id,
+                                                     f"🌐 Домен: {domain_name_telegram} уже отслеживается.\n"
+                                                     f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                                else:
+                                    id_domain = (check_id_domain['rows'][0][0])
+                                    db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
+                                              message.from_user.username, id_domain, user_id)
+                                    bot.send_message(message.from_user.id,
+                                                     f"🌐 Домен: {domain_name_telegram}\n"
+                                                     f"✅ Успешно добавлен в базу данных\n"
+                                                     f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+
+
+            else:
+                """
+                КОД, если юзер прислал всего один домен. Дубль кода вышестоящего.
+                """
+                print(f"USER ID: {user_id} пытается добавить домен {domain_name_telegram}")
+                print(parse_domain_url(domain_name_telegram))
+                if not parse_domain_url(domain_name_telegram):
+                    """
+                    Пользователь прислал домен без протокола.
+                    """
+                    bot.send_message(message.from_user.id,
+                                     f"❌ Ошибка добавления домена.\n"
+                                     f"Причина: отсутствует протокол http/https\n"
+                                     f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                else:
+                    print(type(parse_domain_url(domain_name_telegram)))
+                    db = MySQLi(host, user, password, database_home)
+                    check_id_domain = db.fetch("SELECT id_domain FROM domains WHERE domain LIKE CONCAT('%', %s, '%')",
+                                               parse_domain_url(domain_name_telegram))
+                    print(check_id_domain)
+                    if not check_id_domain['rows']:  # если в БД нет домена
+                        print("Домена нет в БД")
+                        bot.send_message(message.from_user.id,
+                                         f"🕒 Пожалуйста, ожидайте.\n👮 Проводим первичную проверку домена.")
+
+                        status = check_domain(domain_name_telegram, standard_headers_list)
+
+                        if status != 200:
+                            """
+                            Код ответа сервера для домена не равен 200 ОК. Отправляем юзеру уведомление.
+                            """
+                            bot.send_message(message.from_user.id,
+                                             f"❌ Ошибка добавления домена: {domain_name_telegram}\n"
+                                             f"Причина: код ответа сервера {status['code']}\n"
+                                             f"💡 Добавляемый домен должен быть доступен для проверки "
+                                             f"и иметь код ответа сервера 200 ОК.\n"
                                              f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
                         else:
+                            """
+                            Код ответа сервера = 200 ОК. Добавляем домен в БД и связываем с пользователем.
+                            """
+                            db.commit("INSERT INTO domains (domain) VALUES (%s)", domain_name_telegram)
+                            check_id_domain = db.fetch(
+                                "SELECT id_domain FROM domains WHERE domain LIKE CONCAT('%', %s, '%')",
+                                parse_domain_url(domain_name_telegram))
+                            print(check_id_domain)
+                            id_domain = (check_id_domain['rows'][0][0])
+                            print(id_domain)
+                            db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
+                                      message.from_user.username, id_domain, user_id)
+                            bot.send_message(message.from_user.id,
+                                             f"🌐 Домен: {domain_name_telegram}\n"
+                                             f"✅ Успешно добавлен в базу данных\n"
+                                             f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                    else:
+                        print("Проверка привязки домена к пользователю")
+                        """
+                        Проверяем привязку домена к пользователям в БД.
+                        """
+                        telegram_users_id = db.fetch("SELECT telegram_id FROM users WHERE domain_id = %s",
+                                                     check_id_domain['rows'][0][0])
+                        if len(telegram_users_id['rows']) == 0:
                             id_domain = (check_id_domain['rows'][0][0])
                             db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
                                       message.from_user.username, id_domain, user_id)
@@ -308,6 +387,19 @@ def add_site_bd(message):
                                              f"🌐 Домен: {domain_name_telegram}\n"
                                              f"✅ Успешно добавлен в базу данных\n"
                                              f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                        else:
+                            if user_id in telegram_users_id['rows'][0]:
+                                bot.send_message(message.from_user.id,
+                                                 f"🌐 Домен: {domain_name_telegram} уже отслеживается.\n"
+                                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
+                            else:
+                                id_domain = (check_id_domain['rows'][0][0])
+                                db.commit("INSERT INTO users (name, domain_id, telegram_id) VALUES (%s, %s, %s)",
+                                          message.from_user.username, id_domain, user_id)
+                                bot.send_message(message.from_user.id,
+                                                 f"🌐 Домен: {domain_name_telegram}\n"
+                                                 f"✅ Успешно добавлен в базу данных\n"
+                                                 f"Для продолжения напишите /start или нажмите на кнопку 'Назад'")
 
     except ValueError:
         bot.send_message(message.from_user.id, f"Ошибка добавления домена. Напишите /start")
@@ -320,17 +412,22 @@ def delete_site_bd(message):
         if message.text == 'Назад':
             get_text_messages(message)
         else:
+            print(f"Message DELETE: {message}")
             domain_id = message.text
             user_id = message.from_user.id
             db = MySQLi(host, user, password, database_home)
             check_delete = db.fetch("SELECT domain_id FROM users WHERE telegram_id = %s AND id_user = %s", user_id,
                                     domain_id)
+            print(f"{check_delete['rows']}")
             if len(check_delete['rows']) >= 1:
                 db.commit("DELETE FROM users WHERE telegram_id = %s AND id_user = %s", user_id, domain_id)
                 print(f"Пользователь {user_id} отправил заявку на удаление домена {domain_id} из БД")
                 check_delete = db.fetch("SELECT domain_id FROM users WHERE telegram_id = %s AND domain_id = %s",
                                         user_id, domain_id)
+                print(f"CHECK_DELETE: {check_delete['rows']}")
                 if int(len(check_delete['rows'])) == 0:
+                    bot.send_message(message.from_user.id, f"Домен успешно удален. Продолжить /start")
+                elif int(len(check_delete['rows'][0])) == 0:
                     bot.send_message(message.from_user.id, f"Домен успешно удален. Продолжить /start")
                 else:
                     bot.send_message(message.from_user.id,
@@ -402,6 +499,9 @@ def id_operator(message):
 
     except ValueError:
         bot.send_message(message.from_user.id, f"Указан некорректный id. Напишите /start и повторите команду")
+
+
+
 
 
 def main():
